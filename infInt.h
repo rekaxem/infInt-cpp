@@ -286,7 +286,7 @@ infInt infInt::operator-- (int) {
 	return temp;
 }
 
-void main() {
+void infInt_main() {
 	/*
 	
 	Hello! This is the alpha version of the infInt-cpp project.
