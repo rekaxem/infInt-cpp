@@ -209,10 +209,10 @@ infInt operator* (const infInt& a, const infInt& b) {
 }
 
 infInt operator/ (const infInt& a, const infInt& b) {
-	if (a<b) return infInt_zero;
 	if (a.sign && b.sign) return toggle(a)/toggle(b);
 	else if (a.sign) return toggle(toggle(a)/b);
 	else if (b.sign) return toggle(a/toggle(b));
+	if (a<b) return infInt_zero;
 	infInt left=infInt_one, right;
 	right.sign=right.len=0;
 	for (int i=0; i<a.len-b.len; i++) {
