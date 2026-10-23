@@ -1,655 +1,324 @@
-#include <vector>
-#include <string>
-#include <iostream>
-#include <algorithm>
-#include <cstring>
-#include <cstdint>
+#include <bits/stdc++.h>
+using namespace std;
+
+class infInt;
+infInt toggle();
+infInt to_infInt();
+bool operator< (const infInt& a, const infInt& b);
+bool operator> (const infInt& a, const infInt& b);
+bool operator<= (const infInt& a, const infInt& b);
+bool operator>= (const infInt& a, const infInt& b);
+bool operator== (const infInt& a, const infInt& b);
+bool operator!= (const infInt& a, const infInt& b);
+bool operator&& (const infInt& a, const infInt& b);
+bool operator|| (const infInt& a, const infInt& b);
+bool operator! (const infInt& a);
+infInt operator+ (const infInt& a, const infInt& b);
+infInt operator- (const infInt& a, const infInt& b);
+infInt operator* (const infInt& a, const infInt& b);
+infInt operator/ (const infInt& a, const infInt& b);
+infInt operator% (const infInt& a, const infInt& b);
 
 class infInt {
-    std::vector<uint32_t> data;
-    bool sign;
-    bool NaN;
-public:
-    bool isNaN() const {
-        return NaN;
-    }
-    bool isNeg() const {
-        return !NaN && sign;
-    }
-    bool isZero() const {
-        return !NaN && data.size() == 1 && data[0] == 0;
-    }
-    bool isOdd() const {
-        return !NaN && !data.empty() && (data[0] & 1);
-    }
-    bool isEven() const {
-        return !NaN && !data.empty() && !(data[0] & 1);
-    }
-    char CompareAbs(const infInt& a, const infInt&b) const {  // return abs(a) < abs(b) if abs(a) != abs(b)
-        if(a.NaN || b.NaN) return false;
-        if(a.data.size() != b.data.size()) return a.data.size() < b.data.size();
-        int len = a.data.size();
-        for(int i = len - 1; i >= 0; i--) {
-            if(a.data[i] != b.data[i]) {
-                return a.data[i] < b.data[i];
-            }
-        }
-        return -1;  // returns -1 if abs(a) == abs(b)
-    }
-    infInt abs() const {
-        if(NaN) return NONE;
-        if(!sign) return *this;
-        infInt ret = *this;
-        ret.sign = 0;
-        return ret;
-    }
-    infInt& trim() {
-        if(NaN) return *this;
-        while(data.size() > 1 && data.back() == 0) {
-            data.pop_back();
-        }
-        if(this->isZero()) {
-            sign = 0;
-        }
-        return *this;
-    }
-    infInt& negate() {
-        if(NaN) return *this;
-        if(!this->isZero()) sign ^= 1;
-        return *this;
-    }
-    infInt operator-() const {
-        if(NaN) return NONE;
-        if(this->isZero()) return ZERO;
-        infInt ret = *this;
-        ret.sign ^= 1;
-        return ret;
-    }
-    bool operator<(const infInt& other) const {
-        if(NaN ^ other.NaN) return false;
-        if(sign ^ other.sign) return sign;
-        char cmp = CompareAbs(*this, other);
-        if(cmp == -1) return false;
-        return (cmp == 1) ^ sign;
-    }
-    bool operator>(const infInt& other) const {
-        if(NaN ^ other.NaN) return false;
-        if(sign ^ other.sign) return other.sign;
-        char cmp = CompareAbs(*this, other);
-        if(cmp == -1) return false;
-        return (cmp == 0) ^ sign;
-    }
-    bool operator<=(const infInt& other) const {
-        if(NaN ^ other.NaN) return false;
-        if(sign ^ other.sign) return sign;
-        char cmp = CompareAbs(*this, other);
-        if(cmp == -1) return true;
-        return (cmp == 1) ^ sign;
-    }
-    bool operator>=(const infInt& other) const {
-        if(NaN ^ other.NaN) return false;
-        if(sign ^ other.sign) return other.sign;
-        char cmp = CompareAbs(*this, other);
-        if(cmp == -1) return true;
-        return (cmp == 0) ^ sign;
-    }
-    bool operator==(const infInt& other) const {
-        if(NaN ^ other.NaN) return false;
-        if(sign ^ other.sign) return false;
-        return data == other.data;
-    }
-    bool operator!=(const infInt& other) const {
-        if(NaN ^ other.NaN) return true;
-        if(sign ^ other.sign) return true;
-        return data != other.data;
-    }
-    infInt operator~() const {
-        if(NaN) return NONE;
-        return -(*this) - infInt(1);
-    }
-    infInt operator&(const infInt& other) const {
-        if(NaN) return NONE;
-        infInt result;
-        if(!this->sign && !other.sign) {
-            int len = std::min(this->data.size(), other.data.size());
-            result.sign = false;
-            result.data.resize(len);
-            for(int i = 0; i < len; i++) {
-                result.data[i] = this->data[i] & other.data[i];
-            }
-        } else if(this->sign && other.sign) {
-            infInt A = -*this - 1;
-            infInt B = -other - 1;
-            return -(A | B) - 1;
-        } else {
-            const infInt* A = this->sign ? &other : this;
-            const infInt* B = this->sign ? this : &other;
-            int Alen = A->data.size();
-            int Blen = B->data.size();
-            int len = std::max(Alen, Blen);
-            result.sign = false;
-            result.data.resize(len);
-            uint64_t carry = 1;
-            for(int i = 0; i < len; i++) {
-                uint32_t b = (i < Blen ? B->data[i] : 0U);
-                uint64_t inv_b = (~b & 0xFFFFFFFFULL) + carry;
-                carry = inv_b >> 32;
-                result.data[i] = (i < Alen ? A->data[i] : 0U) & (uint32_t)inv_b;
-            }
-        }
-        while(result.data.size() > 1 && result.data.back() == 0) {
-            result.data.pop_back();
-        }
-        if(result.isZero()) return ZERO;
-        return result;
-    }
-    infInt operator|(const infInt& other) const {
-        if(NaN) return NONE;
-        infInt result;
-        if(!this->sign && !other.sign) {
-            const infInt* A = (this->data.size() < other.data.size() ? &other : this);
-            const infInt* B = (this->data.size() < other.data.size() ? this : &other);
-            int Alen = A->data.size();
-            int Blen = B->data.size();
-            result.sign = false;
-            result.data.resize(Alen);
-            for(int i = 0; i < Blen; i++) {
-                result.data[i] = A->data[i] | B->data[i];
-            }
-            for(int i = Blen; i < Alen; i++) {
-                result.data[i] = A->data[i];
-            }
-            while(result.data.size() > 1 && result.data.back() == 0) {
-                result.data.pop_back();
-            }
-            if(result.isZero()) return ZERO;
-            return result;
-        } else {
-            infInt A = -*this - 1;
-            infInt B = -other - 1;
-            return -(A & B) - 1;
-        }
-    }
-    infInt operator^(const infInt& other) const {
-        if(NaN) return NONE;
-        infInt result;
-        if(!this->sign && !other.sign) {
-            const infInt* A = (this->data.size() < other.data.size() ? &other : this);
-            const infInt* B = (this->data.size() < other.data.size() ? this : &other);
-            int Alen = A->data.size();
-            int Blen = B->data.size();
-            result.sign = false;
-            result.data.resize(Alen);
-            for(int i = 0; i < Blen; i++) {
-                result.data[i] = A->data[i] ^ B->data[i];
-            }
-            for(int i = Blen; i < Alen; i++) {
-                result.data[i] = A->data[i];
-            }
-            while(result.data.size() > 1 && result.data.back() == 0) {
-                result.data.pop_back();
-            }
-            if(result.isZero()) return ZERO;
-            return result;
-        } else {
-            infInt A = *this | other;
-            infInt B = *this & other;
-            return A & ~B;
-        }
-    }
-    infInt operator>>(const uint64_t& other) const {
-        if(NaN) return *this;
-        if(other == 0) return *this;
-        if(other >= data.size() * 32) return ZERO;
-        int skipped = other / 32;
-        int shift = other % 32;
-        infInt result;
-        result.sign = sign;
-        if(shift == 0) {
-            result.data.assign(data.begin() + skipped, data.end());
-            return result;
-        }
-        int len = data.size() - skipped;
-        result.data.resize(len);
-        result.data[0] = data[skipped] >> shift;
-        for(int i = 1; i < len; i++) {
-            result.data[i - 1] |= data[i + skipped] << (32 - shift);
-            result.data[i] = data[i + skipped] >> shift;
-        }
-        if(result.data.size() > 1 && result.data.back() == 0) {
-            result.data.pop_back();
-        }
-        if(result.isZero()) return ZERO;
-        return result;
-    }
-    infInt operator<<(const uint64_t& other) const {
-        if(NaN) return *this;
-        if(other == 0) return *this;
-        if(this->isZero()) return ZERO;
-        int blocks = other / 32;
-        int shift = other % 32;
-        infInt result;
-        result.sign = sign;
-        if(shift == 0) {
-            result.data.resize(blocks, 0U);
-            result.data.insert(result.data.end(), data.begin(), data.end());
-            return result;
-        }
-        int len = data.size() + blocks + 1;
-        result.data.resize(len, 0U);
-        for(int i = blocks; i < len - 1; i++) {
-            result.data[i] |= data[i - blocks] << shift;
-            result.data[i + 1] = data[i - blocks] >> (32 - shift);
-        }
-        if(result.data.size() > 1 && result.data.back() == 0) {
-            result.data.pop_back();
-        }
-        if(result.isZero()) return ZERO;
-        return result;
-    }
-    infInt Add(const infInt& a, const infInt& b) const {
-        infInt result;
-        result.sign = a.sign;
-        const infInt* A = nullptr;
-        const infInt* B = nullptr;
-        if(a.data.size() < b.data.size()) {
-            A = &b;
-            B = &a;
-        } else {
-            A = &a;
-            B = &b;
-        }
-        int Alen = A->data.size();
-        int Blen = B->data.size();
-        result.data.resize(Alen);
-        uint32_t carry = 0;
-        for(int i = 0; i < Blen; i++) {
-            uint32_t sum;
-            bool over1 = __builtin_add_overflow(A->data[i], B->data[i], &sum);
-            bool over2 = __builtin_add_overflow(sum, carry, &sum);
-            carry = over1 || over2;
-            result.data[i] = sum;
-        }
-        for(int i = Blen; i < Alen; i++) {
-            uint32_t sum;
-            carry = __builtin_add_overflow(A->data[i], carry, &sum);
-            result.data[i] = sum;
-        }
-        if(carry) {
-            result.data.push_back(carry);
-        }
-        if(result.isZero()) return ZERO;
-        return result;
-    }
-    infInt Sub(const infInt& a, const infInt& b) const {
-        char cmp = CompareAbs(a, b);
-        if(cmp == -1) return ZERO;
-        infInt result;
-        result.sign = a.sign;
-        if(a.isZero()) {
-            result.data = b.data;
-            result.sign = 1;
-            return result;
-        }
-        if(b.isZero()) {
-            result.data = a.data;
-            return result;
-        }
-        const infInt* A = nullptr;
-        const infInt* B = nullptr;
-        if(cmp) {
-            A = &b;
-            B = &a;
-            result.sign ^= 1;
-        } else {
-            A = &a;
-            B = &b;
-        }
-        int Alen = A->data.size();
-        int Blen = B->data.size();
-        result.data.resize(Alen);
-        uint32_t borrow = 0;
-        for(int i = 0; i < Blen; i++) {
-            uint32_t diff;
-            bool under1 = __builtin_sub_overflow(A->data[i], B->data[i], &diff);
-            bool under2 = __builtin_sub_overflow(diff, borrow, &diff);
-            borrow = under1 || under2;
-            result.data[i] = diff;
-        }
-        for(int i = Blen; i < Alen; i++) {
-            uint32_t diff;
-            borrow = __builtin_sub_overflow(A->data[i], borrow, &diff);
-            result.data[i] = diff;
-        }
-        for(int i = Alen - 1; i >= 0; i--) {
-            if(result.data[i] != 0) {
-                result.data.erase(result.data.begin() + i + 1, result.data.end());
-                break;
-            }
-        }
-        return result;
-    }
-    infInt operator+(const infInt& other) const {
-        if(NaN || other.NaN) return NONE;
-        if(sign ^ other.sign) return Sub(*this, other);
-        return Add(*this, other);
-    }
-    infInt operator-(const infInt& other) const {
-        if(NaN || other.NaN) return NONE;
-        if(sign ^ other.sign) return Add(*this, other);
-        return Sub(*this, other);
-    }
-    infInt operator*(const infInt& other) const {
-        if(NaN || other.NaN) return NONE;
-        if(this->isZero() || other.isZero()) return ZERO;
-        const infInt* A = this;
-        const infInt* B = &other;
-        int Alen = A->data.size();
-        int Blen = B->data.size();
-        infInt result;
-        result.data.resize(Alen + Blen);
-        result.sign = A->sign ^ B->sign;
-        for(int i = 0; i < Alen; i++) {
-            uint64_t carry = 0;
-            for(int j = 0; j < Blen; j++) {
-                uint64_t prod = (uint64_t)A->data[i] * B->data[j] + result.data[i + j] + carry;
-                result.data[i + j] = (uint32_t)prod;
-                carry = prod >> 32;
-            }
-            if(carry) result.data[i + Blen] = carry;
-        }
-        if(result.data.size() > 1 && result.data.back() == 0) {
-            result.data.pop_back();
-        }
-        return result;
-    }
-    infInt Divide(const infInt& divisor, infInt& remainder) const {
-        if(divisor.isZero() || NaN || divisor.NaN) {
-            remainder = NONE;
-            return NONE;
-        }
-        if(this->isZero()) {
-            remainder = ZERO;
-            return ZERO;
-        }
-        if(CompareAbs(*this, divisor) == 1) {
-            remainder = *this;
-            remainder.sign = sign;
-            return ZERO;
-        }
-        infInt result(0U);
-        result.sign = sign ^ divisor.sign;
-        if(divisor.data.size() == 1) {
-            int len = data.size();
-            result.data.resize(len);
-            uint64_t div = divisor.data[0];
-            uint64_t rem = 0;
-            for(int i = len - 1; i >= 0; i--) {
-                uint64_t cur = (rem << 32) | data[i];
-                result.data[i] = (uint32_t)(cur / div);
-                rem = cur % div;
-            }
-            if(result.data.size() > 1 && result.data.back() == 0) {
-                result.data.pop_back();
-            }
-            remainder.data = std::vector<uint32_t>{(uint32_t)rem};
-            remainder.sign = sign;
-            return result;
-        }
-        int n = divisor.data.size();
-        int m = this->data.size() - n;
-
-        int shift = __builtin_clz(divisor.data.back());
-        infInt A = *this << shift;
-        infInt B = divisor << shift;
-        if(A.data.size() == m + n) A.data.push_back(0U);
-        result.data.resize(m + 1);
-
-        uint64_t base = 1ULL << 32;
-        for(int i = m; i >= 0; i--) {
-            uint64_t num = ((uint64_t)A.data[i + n] << 32) | A.data[i + n - 1];
-            uint64_t div = B.data[n - 1];
-            uint64_t quo = num / div;
-            uint64_t rem = num % div;
-
-            while(quo >= base || quo * B.data[n - 2] > ((rem << 32) | A.data[i + n - 2])) {
-                quo--;
-                rem += div;
-                if(rem >= base) break;
-            }
-
-            uint64_t borrow = 0;
-            for(int j = 0; j < n; j++) {
-                uint64_t prod = quo * B.data[j] + borrow;
-                borrow = prod >> 32;
-                bool under = __builtin_sub_overflow(A.data[i + j], (uint32_t)prod, &A.data[i + j]);
-                if(under) borrow++;
-            }
-            bool under = __builtin_sub_overflow(A.data[i + n], (uint32_t)borrow, &A.data[i + n]);
-            if(under) {
-                quo--;
-                uint32_t carry = 0;
-                for(int j = 0; j < n; j++) {
-                    uint32_t sum;
-                    bool over1 = __builtin_add_overflow(A.data[i + j], B.data[j], &sum);
-                    bool over2 = __builtin_add_overflow(sum, carry, &A.data[i + j]);
-                    carry = over1 || over2;
-                }
-                A.data[i + n] += (uint32_t)carry;
-            }
-            result.data[i] = quo;
-        }
-        while(result.data.size() > 1 && result.data.back() == 0) {
-            result.data.pop_back();
-        }
-        while(A.data.size() > 1 && A.data.back() == 0) {
-            A.data.pop_back();
-        }
-        remainder = A >> shift;
-        remainder.sign = sign;
-        if(remainder.isZero()) remainder = ZERO;
-        return result;
-    }
-    infInt operator/(const infInt& other) const {
-        infInt remainder;
-        return this->Divide(other, remainder);
-    }
-    infInt operator%(const infInt& other) const {
-        infInt remainder;
-        this->Divide(other, remainder);
-        return remainder;
-    }
-    infInt& operator+=(const infInt& other) {
-        *this = *this + other;
-        return *this;
-    }
-    infInt& operator-=(const infInt& other) {
-        *this = *this - other;
-        return *this;
-    }
-    infInt& operator*=(const infInt& other) {
-        *this = *this * other;
-        return *this;
-    }
-    infInt& operator/=(const infInt& other) {
-        *this = *this / other;
-        return *this;
-    }
-    infInt& operator%=(const infInt& other) {
-        *this = *this % other;
-        return *this;
-    }
-    infInt& operator&=(const uint64_t& other) {
-        *this = *this & other;
-        return *this;
-    }
-    infInt& operator|=(const uint64_t& other) {
-        *this = *this | other;
-        return *this;
-    }
-    infInt& operator^=(const uint64_t& other) {
-        *this = *this ^ other;
-        return *this;
-    }
-    infInt& operator>>=(const uint64_t& other) {
-        *this = *this >> other;
-        return *this;
-    }
-    infInt& operator<<=(const uint64_t& other) {
-        *this = *this << other;
-        return *this;
-    }
-    std::string to_string() const {
-        if(this->isNaN()) return "NaN";
-        if(this->isZero()) return "0";
-        std::string result = "";
-        if(this->isNeg()) result += '-';
-        infInt temp = *this;
-        temp.sign = 0;
-        std::vector<uint32_t> ret;
-        while(temp > ZERO) {
-            infInt rem;
-            temp = temp.Divide(infInt(1000000000U), rem);
-            ret.push_back(rem.data[0]);
-        }
-        std::reverse(ret.begin(), ret.end());
-        bool first = true;
-        for(uint32_t x : ret) {
-            std::string temp = std::to_string(x);
-            if(!first) {
-                result += std::string(9 - temp.length(), '0');
-            }
-            result += temp;
-            first = false;
-        }
-        return result;
-    }
-    friend std::ostream& operator<<(std::ostream& os, const infInt& num) {
-        if(num.isNaN()) {
-            os << "NaN";
-            return os;
-        }
-        if(num.isZero()) {
-            os << '0';
-            return os;
-        }
-        if(num.isNeg()) {
-            os << '-';
-        }
-        infInt temp = num;
-        temp.sign = 0;
-        std::vector<uint32_t> ret;
-        while(temp > ZERO) {
-            infInt rem;
-            temp = temp.Divide(infInt(1000000000U), rem);
-            ret.push_back(rem.data[0]);
-        }
-        std::reverse(ret.begin(), ret.end());
-        bool first = true;
-        for(uint32_t x : ret) {
-            std::string temp = std::to_string(x);
-            if(!first) {
-                os << std::string(9 - temp.length(), '0');
-            }
-            os << temp;
-            first = false;
-        }
-        return os;
-    }
-public:
-    infInt() : data(std::vector<uint32_t>{0}), sign(false), NaN(false) {}
-    infInt(int32_t x) : sign(x < 0), NaN(false) {
-        uint32_t abs_x = x < 0 ? (uint32_t)(-(x + 1)) + 1 : (uint32_t)(x);
-        data = std::vector<uint32_t>{abs_x};
-        trim();
-    }
-    infInt(uint32_t x) : data(std::vector<uint32_t>{x}), sign(false), NaN(false) { trim(); }
-    infInt(int64_t x) : sign(x < 0), NaN(false) {
-        uint64_t abs_x = x < 0 ? (uint64_t)(-(x + 1)) + 1 : (uint64_t)(x);
-        data = std::vector<uint32_t>{(uint32_t)abs_x, (uint32_t)(abs_x >> 32)};
-        trim();
-    }
-    infInt(uint64_t x) : data(std::vector<uint32_t>{(uint32_t)x, (uint32_t)(x >> 32)}), sign(false), NaN(false) { trim(); }
-    infInt(__int128 x) : sign(x < 0), NaN(false) {
-        unsigned __int128 abs_x = x < 0 ? (unsigned __int128)(-(x + 1)) + 1 : (unsigned __int128)(x);
-        data = std::vector<uint32_t>{(uint32_t)abs_x, (uint32_t)(abs_x >> 32), (uint32_t)(abs_x >> 64), (uint32_t)(abs_x >> 96)};
-        trim();
-    }
-    infInt(unsigned __int128 x) : data(std::vector<uint32_t>{(uint32_t)x, (uint32_t)(x >> 32), (uint32_t)(x >> 64), (uint32_t)(x >> 96)}), sign(false), NaN(false) { trim(); }
-    infInt(std::string x) {
-        if(x.empty()) {
-            *this = NONE;
-            return;
-        }
-        bool negative = (x[0] == '-');
-        int startpos = (negative || x[0] == '+');
-        int len = x.length();
-        if(startpos == len) {
-            *this = NONE;
-            return;
-        }
-        infInt res(0U);
-        for(int i = startpos; i < len; i++) {
-            if(x[i] < '0' || x[i] > '9') {
-                *this = NONE;
-                return;
-            }
-            res = res * 10 + (uint32_t)(x[i] - '0');
-        }
-        if(negative) res.negate();
-        res.trim();
-        *this = res;
-    }
-    infInt(char x, char y) : data(std::vector<uint32_t>()), sign(false), NaN(true) {}
-    explicit operator int32_t() const {
-        if(NaN || data.empty()) return 0;
-        uint32_t ret = data[0];
-        if(sign) ret = -ret;
-        int32_t signed_ret;
-        std::memcpy(&signed_ret, &ret, sizeof(signed_ret));
-        return signed_ret;
-    }
-    explicit operator uint32_t() const {
-        if(NaN || data.empty()) return 0;
-        return (sign ? -data[0] : data[0]);
-    }
-    explicit operator int64_t() const {
-        if(NaN || data.empty()) return 0;
-        uint64_t ret = data[0];
-        if(data.size() > 1) ret |= (uint64_t)data[1] << 32;
-        if(sign) ret = -ret;
-        int64_t signed_ret;
-        std::memcpy(&signed_ret, &ret, sizeof(signed_ret));
-        return signed_ret;
-    }
-    explicit operator uint64_t() const {
-        if(NaN || data.empty()) return 0;
-        uint64_t ret = data[0];
-        if(data.size() > 1) ret |= (uint64_t)data[1] << 32;
-        return (sign ? -ret : ret);
-    }
-    explicit operator __int128() const {
-        if(NaN || data.empty()) return 0;
-        unsigned __int128 ret = data[0];
-        if(data.size() > 1) ret |= (unsigned __int128)data[1] << 32;
-        if(data.size() > 2) ret |= (unsigned __int128)data[2] << 64;
-        if(data.size() > 3) ret |= (unsigned __int128)data[3] << 96;
-        if(sign) ret = -ret;
-        __int128 signed_ret;
-        std::memcpy(&signed_ret, &ret, sizeof(signed_ret));
-        return signed_ret;
-    }
-    explicit operator unsigned __int128() const {
-        if(NaN || data.empty()) return 0;
-        unsigned __int128 ret = data[0];
-        if(data.size() > 1) ret |= (unsigned __int128)data[1] << 32;
-        if(data.size() > 2) ret |= (unsigned __int128)data[2] << 64;
-        if(data.size() > 3) ret |= (unsigned __int128)data[3] << 96;
-        return (sign ? -ret : ret);
-    }
-    const static infInt NONE;
-    const static infInt ZERO;
+  public:
+	vector<long long int> digit;
+	bool sign;
+	int len;
+	infInt() {};
+	infInt(string);
+	void set_value(string);
+	void print_value();
+	infInt& operator+= (const infInt&);
+	infInt& operator-= (const infInt&);
+	infInt& operator*= (const infInt&);
+	infInt& operator/= (const infInt&);
+	infInt& operator%= (const infInt&);
+	infInt& operator++ ();
+	infInt operator++ (int);
+	infInt& operator-- ();
+	infInt operator-- (int);
 };
 
-const infInt infInt::NONE = infInt(' ', ' ');
-const infInt infInt::ZERO = infInt(0U);
+infInt::infInt(string str) {
+	int str_len=str.length();
+	sign=(str[0]=='-');
+	for (int i=str_len-1; i>=sign; i-=9) {
+		long long int result=0LL;
+		for (int j=8; j>=0; j--) if (i-j>=sign) result=result*10+str[i-j]-48;
+		digit.push_back(result);
+	}
+	len=(str_len-sign+8)/9;
+} 
+
+void infInt::set_value(string str) {
+	int str_len=str.length();
+	sign=(str[0]=='-');
+	for (int i=str_len-1; i>=sign; i-=9) {
+		long long int result=0LL;
+		for (int j=8; j>=0; j--) if (i-j>=sign) result=result*10+str[i-j]-48;
+		digit.push_back(result);
+	}
+	len=(str_len-sign+8)/9;
+}
+
+void infInt::print_value() {
+	if (sign) printf("-");
+	printf("%lld", digit[len-1]);
+	for (int i=len-2; i>=0; i--) printf("%09lld", digit[i]);
+	printf("\n");
+}
+
+const long long int digit_max=1000000000;
+const infInt infInt_zero("0");
+const infInt infInt_one("1");
+
+infInt toggle(infInt value) {
+	value.sign^=1;
+	return value;
+}
+
+infInt to_infInt(string str) {
+	infInt result;
+	int str_len=str.length();
+	result.sign=(str[0]=='-');
+	for (int i=str_len-1; i>=result.sign; i-=9) {
+		long long int temp=0LL;
+		for (int j=8; j>=0; j--) if (i-j>=result.sign) temp=temp*10+str[i-j]-48;
+		result.digit.push_back(temp);
+	}
+	result.len=(str_len-result.sign+8)/9;
+	return result;
+}
+
+bool operator< (const infInt& a, const infInt& b) {
+	if (a.sign^b.sign) return a.sign;
+	if (a.sign) {
+		if (a.len!=b.len) return a.len>b.len;
+		for (int i=a.len-1; i>=0; i--) if (a.digit[i]!=b.digit[i]) return a.digit[i]>b.digit[i];
+		return false;
+	} else {
+		if (a.len!=b.len) return a.len<b.len;
+		for (int i=a.len-1; i>=0; i--) if (a.digit[i]!=b.digit[i]) return a.digit[i]<b.digit[i];
+		return false;
+	}
+}
+
+bool operator> (const infInt& a, const infInt& b) {
+	if (a.sign^b.sign) return b.sign;
+	if (a.sign) {
+		if (a.len!=b.len) return a.len<b.len;
+		for (int i=a.len-1; i>=0; i--) if (a.digit[i]!=b.digit[i]) return a.digit[i]<b.digit[i];
+		return false;
+	} else {
+		if (a.len!=b.len) return a.len>b.len;
+		for (int i=a.len-1; i>=0; i--) if (a.digit[i]!=b.digit[i]) return a.digit[i]>b.digit[i];
+		return false;
+	}
+}
+
+bool operator!= (const infInt& a, const infInt& b) {
+	return (a<b || a>b);
+}
+
+bool operator== (const infInt& a, const infInt& b) {
+	return !(a!=b);
+}
+
+bool operator<= (const infInt& a, const infInt& b) {
+	return (a<b || a==b);
+}
+
+bool operator>= (const infInt& a, const infInt& b) {
+	return (a>b || a==b);
+}
+
+bool operator&& (const infInt& a, const infInt& b) {
+	return (a!=infInt_zero && b!=infInt_zero);
+}
+
+bool operator|| (const infInt& a, const infInt& b) {
+	return (a!=infInt_zero || b!=infInt_zero);
+}
+
+bool operator! (const infInt& a) {
+	return a==infInt_zero;
+}
+
+infInt operator+ (const infInt& a, const infInt& b) {
+	infInt result;
+	if (a.sign && b.sign) return toggle(toggle(a)+toggle(b));
+	else if (a.sign) return b-toggle(a);
+	else if (b.sign) return a-toggle(b);
+	result.sign=0;
+	int max_len=max(a.len, b.len);
+	bool carry=0;
+	for (int i=0; i<max_len; i++) {
+		result.digit.push_back((i<a.len?a.digit[i]:0LL)+(i<b.len?b.digit[i]:0LL)+carry);
+		if (carry=(result.digit[i]>=digit_max)) result.digit[i]-=digit_max;
+	}
+	result.len=max_len;
+	if (carry) result.digit.push_back(1LL), result.len++;
+	return result;
+}
+
+infInt operator- (const infInt& a, const infInt& b) {
+	infInt result;
+	if (a.sign && b.sign) return toggle(b)-toggle(a);
+	else if (a.sign) return toggle(toggle(a)+b);
+	else if (b.sign) return a+toggle(b);
+	if (a<b) return toggle(b-a);
+	result.sign=0;
+	int max_len=max(a.len, b.len);
+	bool carry=0;
+	for (int i=0; i<max_len; i++) {
+		result.digit.push_back((i<a.len?a.digit[i]:0LL)-(i<b.len?b.digit[i]:0LL)-carry);
+		if (carry=(result.digit[i]<0)) result.digit[i]+=digit_max;
+	}
+	result.len=max_len;
+	for (int i=max_len-1; i>0; i--) {
+		if (result.digit[i]==0LL) result.digit.erase(result.digit.begin()+i), result.len--;
+		else break;
+	}
+	return result;
+}
+
+infInt operator* (const infInt& a, const infInt& b) {
+	infInt result;
+	result.len=1;
+	result.sign=0;
+	result.digit.push_back(0);
+	if (a.len==1 && a.digit[0]==0 || b.len==1 && b.digit[0]==0) return result;
+	long long int carry=0;
+	for (int i=0; i<a.len; i++) {
+		for (int j=0; j<b.len; j++) {
+			if (i+j+1>=result.len) {
+				result.digit.push_back(0LL);
+				result.len++;
+			}
+			result.digit[i+j]+=a.digit[i]*b.digit[j];
+			carry=result.digit[i+j]/digit_max;
+			result.digit[i+j]%=digit_max, result.digit[i+j+1]+=carry;
+		}
+	}
+	for (int i=result.len-1; i>0; i--) {
+		if (result.digit[i]==0LL) result.digit.erase(result.digit.begin()+i), result.len--;
+		else break;
+	}
+	if (a.sign^b.sign) result.sign=1;
+	return result;
+}
+
+infInt operator/ (const infInt& a, const infInt& b) {
+	if (a<b) return infInt_zero;
+	if (a.sign && b.sign) return toggle(a)/toggle(b);
+	else if (a.sign) return toggle(toggle(a)/b);
+	else if (b.sign) return toggle(a/toggle(b));
+	infInt left=infInt_one, right;
+	right.sign=right.len=0;
+	for (int i=0; i<a.len-b.len; i++) {
+		right.digit.push_back(0);
+		right.len++;
+	}
+	right.digit.push_back(digit_max);
+	right.len++;
+	while (left<right) {
+		infInt mid=left+right;
+		bool carry=0;
+		for (int i=mid.len-1; i>0; i--) {
+			if (mid.digit[i]&1) mid.digit[i-1]+=digit_max;
+			mid.digit[i]/=2;
+		}
+		mid.digit[0]/=2;
+		if (mid.digit[mid.len-1]==0LL) mid.digit.erase(mid.digit.end()-1), mid.len--;
+		if (mid*b<=a) {
+			left=mid+infInt_one;
+		} else {
+			right=mid;
+		}
+	}
+	return right-infInt_one;
+}
+
+infInt operator% (const infInt& a, const infInt& b) {
+	if (a.sign && b.sign) return toggle(toggle(a)%toggle(b));
+	else if (a.sign) return toggle(toggle(a)%b);
+	else if (b.sign) return a%toggle(b);
+	return a-a/b*b;
+}
+
+infInt& infInt::operator+= (const infInt& rhs) {
+	return *this=(*this)+rhs;
+}
+
+infInt& infInt::operator-= (const infInt& rhs) {
+	return *this=(*this)-rhs;
+}
+
+infInt& infInt::operator*= (const infInt& rhs) {
+	return *this=(*this)*rhs;
+}
+
+infInt& infInt::operator/= (const infInt& rhs) {
+	return *this=(*this)/rhs;
+}
+
+infInt& infInt::operator%= (const infInt& rhs) {
+	return *this=(*this)%rhs;
+}
+
+infInt& infInt::operator++ () {
+	return *this+=infInt_one;
+}
+
+infInt infInt::operator++ (int) {
+	infInt temp=(*this);
+	++*this;
+	return temp;
+}
+
+infInt& infInt::operator-- () {
+	return *this-=infInt_one;
+}
+
+infInt infInt::operator-- (int) {
+	infInt temp=(*this);
+	--*this;
+	return temp;
+}
+
+void infInt_main() {
+	/*
+	
+	Hello! This is the alpha version of the infInt-cpp project.
+	We currently support the following operators:
+		!=, ==, <, >, <=, >=, &&, ||, !, +, -, *, /, %, +=, -=, *=, /=, %=, ++, --
+	
+	To create an infInt, do
+		infInt [variable_name];
+	To convert string into infInt, do
+		[infInt].set_value( [string] );
+	To process multiple infInts, do
+		[infInt_A]  <operator>  [infInt_B];
+	To assign infInt_A to infInt_B, do
+		[infInt_B] = [infInt_A];
+	To print your infInt, do
+		[infInt].print_value();
+	
+	We now support negative infInt as well. By putting a '-' character before the integer, your infInt will become negative.
+	
+	*/
+	
+	// Here is an example of finding the quotient and remainder of a/b
+	
+	string str_a, str_b;
+	cin>>str_a>>str_b;
+	
+	infInt a(str_a), b(str_b), answer;
+	
+	answer = a / b;
+	answer.print_value();
+	
+	answer = a % b;
+	answer.print_value();
+	
+}
